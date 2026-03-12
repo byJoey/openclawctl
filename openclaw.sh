@@ -3083,19 +3083,28 @@ EOF
 	uninstall_moltbot() {
 		gum confirm "确认卸载 OpenClaw？此操作不可逆。" || return 0
 
-		gum spin --spinner meter --title "正在卸载 OpenClaw..." -- openclaw uninstall
-		npm uninstall -g openclaw
-		crontab -l 2>/dev/null | grep -v "s gateway" | crontab -
+		if is_macos; then
+			local plist="$HOME/Library/LaunchAgents/ai.openclaw.gateway.plist"
+			launchctl unload "$plist" 2>/dev/null || true
+		else
+			systemctl --user disable --now openclaw-gateway.service 2>/dev/null || true
+		fi
+		pkill -f "openclaw.*gatewa" 2>/dev/null || true
+
+		gum spin --spinner meter --title "正在卸载 OpenClaw..." -- \
+			bash -c 'timeout 15 openclaw uninstall 2>/dev/null; true'
+		npm uninstall -g openclaw 2>/dev/null || true
+		crontab -l 2>/dev/null | grep -v "s gateway" | crontab - 2>/dev/null || true
 		rm -rf /root/.openclaw ~/.openclaw
-		hash -r
 
 		rm -f "$HOME/.local/bin/oc" "$HOME/.local/bin/openclawctl.sh" /usr/local/bin/oc
 		for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
 			[[ -f "$rc" ]] && _sed_i '/\.local\/bin.*PATH/d' "$rc"
 		done
 
-		ui_ok "卸载完成"
-		break_end
+		echo
+		gum style --foreground 46 --bold "  卸载完成，脚本已退出。"
+		exit 0
 	}
 
 	nano_openclaw_json() {
