@@ -1428,8 +1428,27 @@ except Exception:
 			local max_tokens=128000
 			local input_cost=0.15
 			local output_cost=0.60
+			local input_modalities='["text", "image"]'
+			local cache_read=0
+			local cache_write=0
 
 			case "$model_id" in
+				MiniMax-M3)
+					context_window=1000000
+					input_cost=0.6
+					output_cost=2.4
+					cache_read=0.12
+					cache_write="null"
+					input_modalities='["text", "image", "video"]'
+					;;
+				MiniMax-M2.7)
+					context_window=204800
+					input_cost=0.3
+					output_cost=1.2
+					cache_read=0.06
+					cache_write=0.375
+					input_modalities='["text"]'
+					;;
 				*opus*|*pro*|*preview*|*thinking*|*sonnet*)
 					input_cost=2.00
 					output_cost=12.00
@@ -1448,14 +1467,14 @@ except Exception:
 {
 	"id": "$model_id",
 	"name": "$provider_name / $model_id",
-	"input": ["text", "image"],
+	"input": $input_modalities,
 	"contextWindow": $context_window,
 	"maxTokens": $max_tokens,
 	"cost": {
 		"input": $input_cost,
 		"output": $output_cost,
-		"cacheRead": 0,
-		"cacheWrite": 0
+		"cacheRead": $cache_read,
+		"cacheWrite": $cache_write
 	}
 }
 EOF
