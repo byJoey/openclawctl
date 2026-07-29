@@ -679,6 +679,28 @@ function Get-ModelCost {
     return @{ input = $input; output = $output; cacheRead = 0; cacheWrite = 0 }
 }
 
+function Get-ModelMetadata {
+    param([string]$ModelId)
+    $meta = @{
+        contextWindow = 1048576
+        input         = @('text', 'image')
+        cost          = Get-ModelCost $ModelId
+    }
+    switch -Regex ($ModelId) {
+        '^MiniMax-M3$' {
+            $meta.contextWindow = 1000000
+            $meta.input = @('text', 'image', 'video')
+            $meta.cost = @{ input = 0.6; output = 2.4; cacheRead = 0.12; cacheWrite = $null }
+        }
+        '^MiniMax-M2\.7$' {
+            $meta.contextWindow = 204800
+            $meta.input = @('text')
+            $meta.cost = @{ input = 0.3; output = 1.2; cacheRead = 0.06; cacheWrite = 0.375 }
+        }
+    }
+    return $meta
+}
+
 function Add-ModelsFromProvider {
     param([string]$Name, [string]$BaseUrl, [string]$ApiKey)
 
@@ -697,14 +719,14 @@ function Add-ModelsFromProvider {
     $modelArray = @()
     foreach ($m in $models) {
         if (-not $m.id) { continue }
-        $cost = Get-ModelCost $m.id
+        $meta = Get-ModelMetadata $m.id
         $modelArray += @{
             id            = $m.id
             name          = "$Name / $($m.id)"
-            input         = @('text', 'image')
-            contextWindow = 1048576
+            input         = $meta.input
+            contextWindow = $meta.contextWindow
             maxTokens     = 128000
-            cost          = $cost
+            cost          = $meta.cost
         }
     }
 
